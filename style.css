@@ -1,0 +1,30 @@
+/* Ensure the chat message containers span the full width */
+div[data-testid="stChatMessage"] {
+    width: 100%;
+}
+
+/* 1. USER MESSAGE (Red/Right) */
+/* Targets the entire user message container using the red icon color (FF4B4B) as a stable identifier */
+div.stChatMessage:has(div[data-testid="chatMessageAvatar-user"]) {
+    /* Push the bubble to the right */
+    align-self: flex-end;
+    /* Force the text content container to align right within the stream */
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* 2. ASSISTANT MESSAGE (Yellow/Left) */
+div.stChatMessage:has(div[data-testid="chatMessageAvatar-assistant"]) {
+    /* Push the bubble to the left */
+    align-self: flex-start;
+    /* Force the text content container to align left within the stream */
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* 3. Text Alignment within the Bubble */
+/* IMPORTANT: Ensure the actual text inside the bubble remains readable (left-aligned) */
+div[data-testid="stChatMessage"] div[data-testid="stMarkdownContainer"] {
+    /* Override any centering applied by Streamlit to the text content */
+    text-align: left !important;
+}

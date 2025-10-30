@@ -1,0 +1,5 @@
+uv add beautifulsoup4 tiktoken  unstructured nltk fastapi jinja2 uvicorn streamlit streamlit-chat
+tqdm black isort langchainhub firecrawl-py certifi python-dotenv openai
+langchain langchain-openai langchain-community langsmith pillow langchain-tavily langchain-pinecone langchain-chroma
+
+uv add --dev ipykernel
