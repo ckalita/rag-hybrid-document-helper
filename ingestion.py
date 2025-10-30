@@ -18,6 +18,7 @@ from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
     WebBaseLoader,
+    UnstructuredWordDocumentLoader,
 )
 
 # --- LangChain document loaders ---
@@ -40,7 +41,8 @@ from langchain_tavily import (
 LOADER_MAPPING = {
     ".pdf": PyPDFLoader,
     ".txt": TextLoader,
-    ".docx": Docx2txtLoader,
+    # ".docx": Docx2txtLoader, #not working as it needs extra dependency Docx2txt which is not added yet
+    ".docx": UnstructuredWordDocumentLoader,
     # Add other loaders here (e.g., .csv, .json, etc.)
 }
 
@@ -101,7 +103,7 @@ def crawl_multiple(tavily_crawl, urls, **kwargs):
     return all_docs
 
 
-def ingest_docs() -> None:
+def ingest_docs(multi_urls: list):
     """
     Load, split, and ingest documentation into a Pinecone vector database.
 
@@ -116,7 +118,7 @@ def ingest_docs() -> None:
     print(f"........STEP 1 : LOADING DOCUMENTS STARTED......")
     # loader = ReadTheDocsLoader(path="langchain-docs/langchain.readthedocs.io/en/latest")
     # TavilyCrawl.invoke() expects a dict input
-    docs = crawl_multiple(tavily_crawl, urls, max_depth=1)
+    docs = crawl_multiple(tavily_crawl, multi_urls, max_depth=1)
     print(f"✅ Loaded total {len(docs)} documents from Tavily")
     # print("********Final Documents: ", docs)
     if not docs:
@@ -130,19 +132,19 @@ def ingest_docs() -> None:
         chunk_overlap=100,  # Overlap between chunks for context preservation
         separators=["\n\n", "\n", " ", ""],  # Hierarchy of text split points
     )
-    documents = text_splitter.split_documents(documents=docs)
-    print(f"Split into {len(documents)} text chunks")
+    chunks = text_splitter.split_documents(documents=docs)
+    print(f"Split into {len(chunks)} text chunks")
 
     print(f"........STEP 3 : EMBEDDING AND STORING To VECTORSTORE STARTED.....")
     # --- Step 4: Embed and upload to Pinecone ---
-    print(f"Preparing to insert {len(documents)} chunks into Pinecone")
+    print(f"Preparing to insert {len(chunks)} chunks into Pinecone")
     # --- Step 3a: Re-initialize embeddings (optional, but clean) ---
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
     # --- Step 3b: Safety filter to avoid Pinecone 4MB limit ---
     MAX_BYTES = int(3.5 * 1024 * 1024)  # 3.5 MB limit per vector
     safe_documents = []
-    for d in documents:
+    for d in chunks:
         size = len(d.page_content.encode("utf-8"))
         if size > MAX_BYTES:
             print(
@@ -158,7 +160,7 @@ def ingest_docs() -> None:
         print("⚠️ No valid chunks to upload — check your chunk size or crawler content.")
         return
 
-    # To avoid sending all docs in one large payload, upload in batches
+    # To avoid sending all docs in one large payload, upload in batches of 50 chunks
     BATCH_SIZE = 50
     print(f"Uploading {len(safe_documents)} documents in batches of {BATCH_SIZE}")
 
@@ -183,8 +185,11 @@ def ingest_docs() -> None:
 def ingest_webpage(url: str):
     """Crawl and ingest a webpage dynamically."""
     try:
-        loader = WebBaseLoader(url)
-        docs = loader.load()
+        # --- Step 1: Load raw documentation ---
+        print(f"........STEP 1 : LOADING DOCUMENTS STARTED......")
+        # add code to split url if multiple urls are passed
+        multi_urls = [url.strip() for url in url.split(",")]
+        docs = crawl_multiple(tavily_crawl, multi_urls, max_depth=1)
         if not docs:
             return f"❌ No content found at {url}"
 
@@ -197,62 +202,6 @@ def ingest_webpage(url: str):
         return f"⚠️ Error while ingesting webpage: {str(e)}"
 
 
-# ----------------------------------------------------------------------
-# 📄 File ingestion (PDF, DOCX, TXT)
-# ----------------------------------------------------------------------
-def ingest_file(uploaded_file):
-    """Handle file upload ingestion for PDF, DOCX, TXT."""
-    print("*******INGEST FILE STARTED*******:", uploaded_file.name)
-    suffix = os.path.splitext(uploaded_file.name)[1].lower()
-    print("*******FILE SUFFIX*******:", suffix)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_path = tmp_file.name
-
-    try:
-        # 1. Load Documents
-        try:
-            loader = get_document_loader(tmp_path)
-            docs = loader.load()
-        except ValueError as e:
-            print(f"Error loading document: {e}")
-            return None
-        except Exception as e:
-            print(f"An unexpected error occurred during loading: {e}")
-            return None
-
-        # docs = loader.load()
-        if not docs:
-            return "⚠️ No readable content found in the file."
-
-        # 2. Split Documents into Chunks
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        chunks = splitter.split_documents(docs)
-        print(f"Document split into {len(chunks)} chunks.")
-        print("*******CHUNKS*******:", chunks)
-        # 3. Index Chunks into Pinecone
-        # Use the from_documents static method for a direct, one-step creation/addition
-        PineconeVectorStore.from_documents(
-            documents=chunks, embedding=embeddings, index_name=INDEX_NAME
-        )
-
-        return f"✅ Successfully ingested {uploaded_file.name} ({len(chunks)} chunks)"
-    except Exception as e:
-        return f"⚠️ Error while processing {uploaded_file.name}: {str(e)}"
-
-
-def get_document_loader(file_path: str):
-    """Determines the correct LangChain DocumentLoader based on file extension."""
-    ext = os.path.splitext(file_path)[-1].lower()
-    loader_class = LOADER_MAPPING.get(ext)
-
-    if loader_class:
-        # Loaders are initialized with the file path
-        return loader_class(file_path)
-    else:
-        raise ValueError(f"Unsupported file type: {ext}")
-
-
 # --- Entry point ---
 if __name__ == "__main__":
-    ingest_docs()
+    ingest_docs(urls)

@@ -4,7 +4,7 @@ from typing import Set
 
 import streamlit as st
 
-from ingestion import ingest_file, ingest_webpage
+from ingestion_from_ui import ingest_file, ingest_webpage
 
 # Assuming 'llm_call' and 'run_llm' are correctly set up
 from llm_call import run_llm
@@ -35,13 +35,14 @@ st.title("📚 Document Helper Chatbot")
 st.sidebar.header("🧠 Ingestion Options")
 
 # --- Webpage Ingestion ---
-web_url = st.sidebar.text_input("Enter webpage URL to ingest:")
+web_urls = st.sidebar.text_input("Enter webpage URL to ingest:")
 if st.sidebar.button("Ingest Webpage"):
-    if web_url:
-        with st.spinner("🔍 Crawling and embedding webpage..."):
-            print("*******Web URL to ingest:", web_url)  # Debugging line
-            # result = ingest_webpage(web_url)
-        # st.sidebar.success(result)
+    if web_urls:
+        with st.sidebar:
+            with st.spinner("🔍 Crawling and embedding webpage..."):
+                print("*******Web URL to ingest:", web_urls)  # Debugging line
+                result = ingest_webpage(web_urls)
+            st.sidebar.success(result)
     else:
         st.sidebar.warning("Please enter a valid URL.")
 
@@ -50,10 +51,13 @@ uploaded_file = st.sidebar.file_uploader(
     "Upload document (PDF, DOCX, TXT):", type=["pdf", "docx", "txt"]
 )
 if uploaded_file:
-    with st.spinner("📄 Processing file..."):
-        print("*******Uploaded file to ingest:", uploaded_file.name)  # Debugging line
-        result = ingest_file(uploaded_file)
-    # st.sidebar.success(result)
+    with st.sidebar:
+        with st.spinner("📄 Processing file..."):
+            print(
+                "*******Uploaded file to ingest:", uploaded_file.name
+            )  # Debugging line
+            result = ingest_file(uploaded_file)
+        st.sidebar.success(result)
 # --- Session State Initialization ---
 
 # Initialize chat history lists in session state if they don't exist

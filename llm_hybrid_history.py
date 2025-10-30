@@ -48,8 +48,12 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
         else score_threshold
     )
 
-    # Filter docs by score threshold
-    retrieved_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+    # --- Filter documents by score threshold ---
+    # retrieved_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+    filtered_docs_and_scores = [
+        (doc, score) for doc, score in docs_and_scores if score >= score_threshold
+    ]
+    retrieved_docs = [doc for doc, _ in filtered_docs_and_scores]
     print(f"Retrieved {len(retrieved_docs)} docs after (filtered).")
     context_text = "\n\n".join([doc.page_content for doc in retrieved_docs])
     context_strength = len(context_text.strip())
@@ -59,7 +63,7 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
         print("⚠️ No relevant documents retrieved — will use general chat mode.")
     else:
         print(f"✅ Retrieved {len(retrieved_docs)} relevant documents:")
-        for i, (doc, score) in enumerate(retrieved_docs):
+        for i, (doc, score) in enumerate(filtered_docs_and_scores):
             print(
                 f"   {i+1}. Score: {score:.3f} | Source: {doc.metadata.get('source', '')[:100]}"
             )
