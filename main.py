@@ -1,3 +1,4 @@
+import html as _html  # for escaping text when rendering as HTML
 import os
 import re
 from typing import Set
@@ -9,8 +10,6 @@ from ingestion_from_ui import ingest_file, ingest_webpage
 # Assuming 'llm_call' and 'run_llm' are correctly set up
 from llm_call import run_llm
 from llm_hybrid_history import run_llm_hybrid
-
-import html as _html  # for escaping text when rendering as HTML
 
 # --- Custom CSS for wider sidebar and overall layout ---
 st.markdown(
@@ -42,7 +41,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
 
 
 # --- Chat CSS (scrollable window + fixed input) ---
@@ -129,7 +127,8 @@ st.markdown(
 )
 
 # ===================== FOOTER SECTION =====================
-st.markdown("""
+st.markdown(
+    """
 <style>
 .footer {
     position: fixed;
@@ -151,7 +150,9 @@ st.markdown("""
     opacity: 0.95;  /* slightly brighten when hovered */
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 st.markdown(
     """
     <div class="footer">
@@ -160,14 +161,15 @@ st.markdown(
         <a href="https://www.pinecone.io/" target="_blank">Pinecon</a> & <a href="https://openai.com" target="_blank">OpenAI</a>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 
 # ===================== FIXED CHATBOT HEADER =====================
 
 # Inject CSS for the fixed header
-st.markdown("""
+st.markdown(
+    """
 <style>
 /* --- FIXED HEADER --- */
 .fixed-header {
@@ -220,10 +222,9 @@ st.markdown("""
   }
 }
 </style>
-""", unsafe_allow_html=True)
-
-
-
+""",
+    unsafe_allow_html=True,
+)
 
 
 # Function to render the fixed header
@@ -294,7 +295,9 @@ uploaded_file = st.sidebar.file_uploader(
 if uploaded_file:
     with st.sidebar:
         with st.spinner("📄 Processing file..."):
-            print("*******Uploaded file to ingest:", uploaded_file.name)  # Debugging line
+            print(
+                "*******Uploaded file to ingest:", uploaded_file.name
+            )  # Debugging line
             result = ingest_file(uploaded_file)
         st.sidebar.success(result)
 
@@ -303,6 +306,7 @@ if "chat_answers_history" not in st.session_state:
     st.session_state["chat_answers_history"] = []
     st.session_state["user_prompt_history"] = []
     st.session_state["chat_history"] = []  # LangChain history format
+
 
 # --- Helper Functions ---
 def create_sources_string(source_urls: Set[str]) -> str:
@@ -327,6 +331,7 @@ def _to_html_safe(text: str) -> str:
     escaped = _html.escape(str(text))
     return escaped.replace("\n", "<br>")
 
+
 # --- Render chat messages only if they exist ---
 if "messages" in st.session_state and st.session_state["messages"]:
     st.markdown("<div class='chat-window'>", unsafe_allow_html=True)
@@ -335,7 +340,7 @@ if "messages" in st.session_state and st.session_state["messages"]:
         role_class = "user-message" if message["role"] == "user" else "bot-message"
         st.markdown(
             f"<div class='{role_class}'>{_html.escape(message['content'])}</div>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -376,10 +381,13 @@ if prompt:
     chat_html = "<div class='chat-window' id='chat-window'>"
 
     for user_query, generated_response in zip(
-        st.session_state["user_prompt_history"], st.session_state["chat_answers_history"]
+        st.session_state["user_prompt_history"],
+        st.session_state["chat_answers_history"],
     ):
         chat_html += f"<div class='user-message'>{_to_html_safe(user_query)}</div>"
-        chat_html += f"<div class='bot-message'>{_to_html_safe(generated_response)}</div>"
+        chat_html += (
+            f"<div class='bot-message'>{_to_html_safe(generated_response)}</div>"
+        )
 
     # Add the current (just-submitted) user message without a bot reply yet
     chat_html += f"<div class='user-message'>{_to_html_safe(prompt)}</div>"
@@ -399,7 +407,7 @@ if prompt:
     )
 
     # === Generate and show assistant response ===
-    with st.spinner("🤖 Generating response..."):
+    with st.spinner("..."):
         generated_response = run_llm_hybrid(
             query=prompt, chat_history=st.session_state["chat_history"]
         )
@@ -408,7 +416,12 @@ if prompt:
 
         # ===================== FETCH THE SOURCES =====================
         try:
-            sources = set([doc.metadata["source"] for doc in generated_response.get("context", [])])
+            sources = set(
+                [
+                    doc.metadata["source"]
+                    for doc in generated_response.get("context", [])
+                ]
+            )
         except Exception:
             sources = set()
 
@@ -421,13 +434,15 @@ if prompt:
             )
         )
 
-        if "general_chat" in generated_response.get("answer_type", "") or is_simple_query:
+        if (
+            "general_chat" in generated_response.get("answer_type", "")
+            or is_simple_query
+        ):
             clean_answer = answer.replace("**NO_DOC_ANSWER**", "").strip()
             source_string = ""
         else:
             clean_answer = answer
-            source_string = create_sources_string(sources) # format sources
-
+            source_string = create_sources_string(sources)  # format sources
 
         formatted_response = f"{clean_answer} {source_string}".strip()
 
@@ -439,7 +454,9 @@ if prompt:
 
         # Update histories
         st.session_state["chat_answers_history"].append(formatted_response)
-        st.session_state["chat_history"].append(("ai", generated_response.get("answer", "")))
+        st.session_state["chat_history"].append(
+            ("ai", generated_response.get("answer", ""))
+        )
 
         # Scroll again after the bot reply
         st.markdown(
@@ -452,4 +469,3 @@ if prompt:
             unsafe_allow_html=True,
         )
     # After appending, Streamlit will rerun and the chat window will show the new messages
-
