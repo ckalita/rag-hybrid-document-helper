@@ -17,8 +17,8 @@ from langchain_community.document_loaders import (
     Docx2txtLoader,
     PyPDFLoader,
     TextLoader,
-    WebBaseLoader,
     UnstructuredWordDocumentLoader,
+    WebBaseLoader,
 )
 
 # --- LangChain document loaders ---
