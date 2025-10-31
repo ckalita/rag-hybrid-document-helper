@@ -128,6 +128,42 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ===================== FOOTER SECTION =====================
+st.markdown("""
+<style>
+.footer {
+    position: fixed;
+    bottom: 4px;  /* just beneath input field */
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12.5px;
+    color: rgba(80, 80, 80, 0.65);  /* soft gray */
+    background: rgba(255, 255, 255, 0.75);  /* translucent background */
+    padding: 2px 10px;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);  /* slight blur behind it */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+.footer:hover {
+    opacity: 0.95;  /* slightly brighten when hovered */
+}
+</style>
+""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div class="footer">
+        © 2025 <b>Chandan Kalita</b> | Document Helper Chat Assistant 
+        Built with ❤️ using <a href="https://streamlit.io" target="_blank">Streamlit</a> <a href="https://docs.langchain.com/oss/python/langchain/overview" target="_blank">Langchain</a> 
+        <a href="https://www.pinecone.io/" target="_blank">Pinecon</a> & <a href="https://openai.com" target="_blank">OpenAI</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
 # ===================== FIXED CHATBOT HEADER =====================
 
 # Inject CSS for the fixed header
@@ -273,10 +309,11 @@ def create_sources_string(source_urls: Set[str]) -> str:
     """Formats a set of source URLs into a numbered markdown string."""
     if not source_urls:
         return ""
+
     sources_list = sorted(list(source_urls))  # Sort for consistent order
     sources_string = "\n\n**Sources:**\n"
     for i, source in enumerate(sources_list):
-        sources_string += f"{i + 1}. [{source}]({source})\n"
+        sources_string += f"{i + 1}. {source}\n"
     return sources_string
 
 
@@ -319,6 +356,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
 # --- Fixed Input Bar ---
 st.markdown("<div class='fixed-input'>", unsafe_allow_html=True)
 
@@ -327,7 +365,6 @@ prompt = st.chat_input("Enter your prompt here...")
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)  # close chat-wrapper
-
 
 # --- Handling User Input and calling LLM (keeps your original logic, only adapted to new rendering) ---
 if prompt:
@@ -369,6 +406,7 @@ if prompt:
 
         print("*******Generated Response:", generated_response)  # Debugging line
 
+        # ===================== FETCH THE SOURCES =====================
         try:
             sources = set([doc.metadata["source"] for doc in generated_response.get("context", [])])
         except Exception:
@@ -388,7 +426,8 @@ if prompt:
             source_string = ""
         else:
             clean_answer = answer
-            source_string = create_sources_string(sources)
+            source_string = create_sources_string(sources) # format sources
+
 
         formatted_response = f"{clean_answer} {source_string}".strip()
 
@@ -413,3 +452,4 @@ if prompt:
             unsafe_allow_html=True,
         )
     # After appending, Streamlit will rerun and the chat window will show the new messages
+
