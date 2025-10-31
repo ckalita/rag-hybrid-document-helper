@@ -82,7 +82,7 @@ def ingest_webpage(url: str):
         # add code to split url if multiple urls are passed
         multi_urls = [url.strip() for url in url.split(",")]
         ingest_docs(multi_urls)
-
+        return f"✅ Successfully ingested url(s): {url}"
     except Exception as e:
         return f"⚠️ Error while ingesting webpage: {str(e)}"
 
@@ -126,7 +126,7 @@ def ingest_file(uploaded_file):
             documents=chunks, embedding=embeddings, index_name=INDEX_NAME
         )
 
-        return f"✅ Successfully ingested {uploaded_file.name} ({len(chunks)} chunks)"
+        return f"✅ Successfully ingested {uploaded_file.name}"
     except Exception as e:
         return f"⚠️ Error while processing {uploaded_file.name}: {str(e)}"
 
