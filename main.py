@@ -155,7 +155,9 @@ st.markdown("""
 st.markdown(
     """
     <div class="footer">
-        © 2025 <strong>Chandan Kalita : Document Helper Chat Assistant</strong> — Built with ❤️ using Streamlit & OpenAI
+        © 2025 <b>Chandan Kalita</b> | Document Helper Chat Assistant 
+        Built with ❤️ using <a href="https://streamlit.io" target="_blank">Streamlit</a> <a href="https://docs.langchain.com/oss/python/langchain/overview" target="_blank">Langchain</a> 
+        <a href="https://www.pinecone.io/" target="_blank">Pinecon</a> & <a href="https://openai.com" target="_blank">OpenAI</a>
     </div>
     """,
     unsafe_allow_html=True
