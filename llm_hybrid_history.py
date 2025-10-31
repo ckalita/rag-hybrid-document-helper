@@ -1,5 +1,6 @@
-from dotenv import load_dotenv
 from typing import Any, Dict, List
+
+from dotenv import load_dotenv
 from langchain import hub
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
@@ -36,8 +37,23 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
     docs_and_scores = docsearch.similarity_search_with_score(query, k=k)
     print(f"Retrieved {len(docs_and_scores)} docs (unfiltered).")
     print(f"***Retrieved docs_and_scores : ", docs_and_scores)
-    # Filter docs by score threshold
-    retrieved_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+
+    # Adjust score threshold if any doc is from non-HTTP source
+    score_threshold = (
+        0.35
+        if any(
+            d.metadata.get("source", "") and "http" not in d.metadata.get("source", "")
+            for d, _ in docs_and_scores
+        )
+        else score_threshold
+    )
+
+    # --- Filter documents by score threshold ---
+    # retrieved_docs = [doc for doc, score in docs_and_scores if score >= score_threshold]
+    filtered_docs_and_scores = [
+        (doc, score) for doc, score in docs_and_scores if score >= score_threshold
+    ]
+    retrieved_docs = [doc for doc, _ in filtered_docs_and_scores]
     print(f"Retrieved {len(retrieved_docs)} docs after (filtered).")
     context_text = "\n\n".join([doc.page_content for doc in retrieved_docs])
     context_strength = len(context_text.strip())
@@ -47,8 +63,10 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
         print("⚠️ No relevant documents retrieved — will use general chat mode.")
     else:
         print(f"✅ Retrieved {len(retrieved_docs)} relevant documents:")
-        for i, (doc, score) in enumerate(docs_and_scores):
-            print(f"   {i+1}. Score: {score:.3f} | Source: {doc.metadata.get('source', '')[:100]}")
+        for i, (doc, score) in enumerate(filtered_docs_and_scores):
+            print(
+                f"   {i+1}. Score: {score:.3f} | Source: {doc.metadata.get('source', '')[:100]}"
+            )
 
     # --- Check if context is meaningful ---
     has_relevant_context = len(retrieved_docs) > 0
@@ -63,28 +81,37 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
         "Context:\n{context}\n"
     )
 
-    retrieval_qa_chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", template_content),
-        ("human", "{input}"),
-    ])
+    retrieval_qa_chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", template_content),
+            ("human", "{input}"),
+        ]
+    )
 
     stuff_documents_chain = create_stuff_documents_chain(chat, retrieval_qa_chat_prompt)
 
     # --- Case 1: No relevant context → General Chat ---
-    if not has_relevant_context or context_strength < 500:
+    if not has_relevant_context:
         print("💬 Switching to general chat mode (weak or no context).")
 
-        general_prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful and conversational assistant.\n\nContext: {context}"),
-            ("human", "{input}"),
-        ])
+        general_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You are a helpful and conversational assistant.\n\nContext: {context}",
+                ),
+                ("human", "{input}"),
+            ]
+        )
 
         general_chain = create_stuff_documents_chain(chat, general_prompt)
-        general_result = general_chain.invoke({
-            "input": query,
-            "context": "",
-            "chat_history": chat_history,
-        })
+        general_result = general_chain.invoke(
+            {
+                "input": query,
+                "context": "",
+                "chat_history": chat_history,
+            }
+        )
         print("✅ General chat answer generated: ", general_result)
         result = {
             "answer": general_result,

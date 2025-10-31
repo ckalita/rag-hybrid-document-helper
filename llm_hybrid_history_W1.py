@@ -1,14 +1,14 @@
-from dotenv import load_dotenv
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
 from langchain import hub
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.history_aware_retriever import create_history_aware_retriever
 from langchain.chains.retrieval import create_retrieval_chain
+from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from langchain_core.documents import Document
 
 from consts import INDEX_NAME
 
@@ -71,7 +71,10 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
         print("⚠️ Weak or empty context detected — switching to general chat mode.")
         general_prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", "You are a helpful assistant. Answer conversationally.\n\nContext: {context}"),
+                (
+                    "system",
+                    "You are a helpful assistant. Answer conversationally.\n\nContext: {context}",
+                ),
                 ("human", "{input}"),
             ]
         )
@@ -82,7 +85,7 @@ def run_llm_hybrid(query: str, chat_history: List[Dict[str, Any]] = []):
             "answer": general_result,
             "source_documents": [],
             "context": [],
-            "answer_type": "general_chat"
+            "answer_type": "general_chat",
         }
         return result
 
