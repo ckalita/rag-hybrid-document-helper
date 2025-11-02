@@ -1,7 +1,29 @@
+import os
+import boto3
+
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 
+def load_ssm_params(prefix="/askmydoc/"):
+    """
+    Load plain String parameters from AWS Systems Manager Parameter Store
+    and set them as environment variables.
+    """
+    ssm = boto3.client("ssm", region_name="us-east-1")  # Update region if needed
+
+    paginator = ssm.get_paginator("get_parameters_by_path")
+
+    for page in paginator.paginate(Path=prefix, Recursive=True, WithDecryption=False):
+        for param in page["Parameters"]:
+            key = param["Name"].split("/")[-1]  # Extract last part, e.g. OPENAI_API_KEY
+            value = param["Value"]
+            os.environ[key] = value
+            print(f"✅ Loaded {key} from AWS SSM")
+
+    print("🎉 All SSM parameters loaded successfully.")
+
 load_dotenv()
+load_ssm_params()
 
 from typing import Any, Dict, List
 

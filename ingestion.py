@@ -3,6 +3,7 @@ import os  # For interacting with the operating system (e.g., setting environmen
 import ssl  # For handling SSL/TLS security contexts
 import tempfile
 
+import boto3
 # --- Third-party library imports ---
 import certifi  # Provides Mozilla’s trusted CA bundle for SSL certificate verification
 from dotenv import (
@@ -49,8 +50,27 @@ LOADER_MAPPING = {
 # --- Project-specific imports ---
 from consts import INDEX_NAME  # Constant holding the name of the Pinecone index
 
+def load_ssm_params(prefix="/askmydoc/"):
+    """
+    Load plain String parameters from AWS Systems Manager Parameter Store
+    and set them as environment variables.
+    """
+    ssm = boto3.client("ssm", region_name="us-east-1")  # Update region if needed
+
+    paginator = ssm.get_paginator("get_parameters_by_path")
+
+    for page in paginator.paginate(Path=prefix, Recursive=True, WithDecryption=False):
+        for param in page["Parameters"]:
+            key = param["Name"].split("/")[-1]  # Extract last part, e.g. OPENAI_API_KEY
+            value = param["Value"]
+            os.environ[key] = value
+            print(f"✅ Loaded {key} from AWS SSM")
+
+    print("🎉 All SSM parameters loaded successfully.")
+
 # --- Environment and SSL configuration ---
 load_dotenv()  # Load environment variables (e.g., API keys) from .env file
+load_ssm_params() # Load parameters from AWS SSM
 
 # Configure SSL context to use certifi certificates for secure HTTPS requests
 ssl_context = ssl.create_default_context(cafile=certifi.where())
